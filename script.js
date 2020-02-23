@@ -49,19 +49,33 @@ class Direction {
     this.v = v;
   }
 
+  canGoLeft() {
+    return this.h === 0;
+  }
   goLeft() {
     this.v = 0;
     this.h = 1;
   }
 
+  canGoRight() {
+    return this.h === 0;
+  }
   goRight() {
     this.v = 0;
     this.h = -1;
   }
 
+  canGoUp() {
+    return this.v === 0;
+  }
+
   goUp() {
     this.v = -1;
     this.h = 0;
+  }
+
+  canGoDown() {
+    return this.v === 0;
   }
 
   goDown() {
@@ -76,11 +90,11 @@ class Snake {
     this.position = p;
     this.direction = d;
     this.body = [p];
-    this.size = 2;
+    this.size = 10;
   }
 
   draw() {
-    for (var i = 0; i < this.size; i++) {
+    for (var i = 0; i < this.body.length; i++) {
       context.fillRect(
         this.body[i].x * this.SNAKE_SQUARE + this.SNAKE_SQUARE / 2,
         this.body[i].y * this.SNAKE_SQUARE + this.SNAKE_SQUARE / 2,
@@ -90,22 +104,34 @@ class Snake {
     }
   }
 
-  update() {
-    var temp;
-    if (this.body.length >= this.size) {
-      temp = this.body.pop();
-    } else {
-      temp = new Position(this.body[0].x, this.body[0].y);
+  isAHit() {
+    var hit = false;
+    for (var i = 1; i < this.body.length && !hit; i++) {
+      hit =
+        this.body[i].x === this.body[0].x && this.body[i].y === this.body[0].y;
     }
+    return hit;
+  }
 
-    temp.x += this.direction.h;
-    temp.y += this.direction.v;
-    this.body.unshift(temp);
-    this.draw();
+  update() {
+    const pos = new Position(
+      this.body[0].x + this.direction.h,
+      this.body[0].y + this.direction.v
+    );
+    this.body.unshift(pos);
+    if (this.body.length === this.size) {
+      this.body.pop();
+    }
+    if (this.isAHit()) {
+      paused = true;
+      console.log("lost!");
+    } else {
+      this.draw();
+    }
   }
 }
 
-var fps = 5;
+var fps = 8;
 var paused = false;
 const snake = new Snake(new Position(0, 0), new Direction(1, 0));
 
@@ -123,16 +149,16 @@ animate();
 window.addEventListener("keydown", evt => {
   switch (evt.keyCode) {
     case 38:
-      snake.direction.goUp();
+      snake.direction.canGoUp() && snake.direction.goUp();
       break;
     case 40:
-      snake.direction.goDown();
+      snake.direction.canGoDown() && snake.direction.goDown();
       break;
     case 37:
-      snake.direction.goRight();
+      snake.direction.canGoRight() && snake.direction.goRight();
       break;
     case 39:
-      snake.direction.goLeft();
+      snake.direction.canGoLeft() && snake.direction.goLeft();
       break;
     case 32:
       paused = !paused;
