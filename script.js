@@ -249,10 +249,6 @@ function animate() {
 
   setTimeout(function() {
     requestAnimationFrame(animate);
-    context.save();
-    context.fillStyle = "rgb(255,0,0)";
-    context.fillRect(50, 50, 10, 10);
-    context.restore();
     snake.update();
   }, 1000 / fps);
 }
