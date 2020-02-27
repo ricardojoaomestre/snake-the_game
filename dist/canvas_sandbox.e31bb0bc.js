@@ -117,7 +117,44 @@ parcelRequire = (function (modules, cache, entry, globalName) {
   }
 
   return newRequire;
-})({"src/Position.js":[function(require,module,exports) {
+})({"src/utils.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.getPixelRatio = getPixelRatio;
+exports.createHiDPICanvas = createHiDPICanvas;
+
+function getPixelRatio(canvasId) {
+  var ctx = document.getElementById(canvasId).getContext("2d"),
+      dpr = window.devicePixelRatio || 1,
+      bsr = ctx.webkitBackingStorePixelRatio || ctx.mozBackingStorePixelRatio || ctx.msBackingStorePixelRatio || ctx.oBackingStorePixelRatio || ctx.backingStorePixelRatio || 1;
+  return dpr / bsr;
+}
+/**
+ * Returns the context and canvas configured to support the aspect ratio of the browser
+ * @param {int} w window width
+ * @param {int} h window height
+ * @param {int} ratio device aspect ratio
+ */
+
+
+function createHiDPICanvas(canvasId, w, h, ratio) {
+  if (!ratio) {
+    ratio = getPixelRatio(canvasId);
+  }
+
+  var can = document.getElementById(canvasId);
+  can.width = w * ratio;
+  can.height = h * ratio;
+  can.style.width = w + "px";
+  can.style.height = h + "px";
+  var ctx = can.getContext("2d");
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  return ctx;
+}
+},{}],"src/Position.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -278,17 +315,17 @@ function () {
    * Snake: Represents the game actor: the snake.
    * @param {Position} p the position of the head of the snake
    * @param {Direction} d the direction of the snake
-   * @param {Object} c the canvas context
+   * @param {number} width the width of the snake (usually same as the grid)
    */
-  function Snake(p, d, c) {
+  function Snake(p, d, width) {
     _classCallCheck(this, Snake);
 
     this.position = p;
     this.direction = d;
     this.body = [p];
     this.size = 20;
-    this.snakeSquare = 15;
-    this.context = c;
+    this.snakeSquare = width;
+    this.context = window.context;
   }
   /**
    * draws the snake body
@@ -298,7 +335,7 @@ function () {
   _createClass(Snake, [{
     key: "draw",
     value: function draw() {
-      this.context.fillRect(this.position.x * this.snakeSquare + this.snakeSquare / 2, this.position.y * this.snakeSquare + this.snakeSquare / 2, this.snakeSquare, this.snakeSquare);
+      this.context.fillRect(this.position.x * this.snakeSquare, this.position.y * this.snakeSquare, this.snakeSquare, this.snakeSquare);
     }
     /**
      * Returns true if the head of the snake hits its own body
@@ -329,13 +366,13 @@ function () {
       this.position = this.body[0];
 
       if (this.isAHit()) {
-        paused = true;
+        this.paused = true;
         console.log("lost!");
       } else {
         // if body has grown enough, remove the tail at the end
         if (this.body.length === this.size) {
           tail = this.body.pop();
-          this.context.clearRect(tail.x * this.snakeSquare + this.snakeSquare / 2, tail.y * this.snakeSquare + this.snakeSquare / 2, this.snakeSquare, this.snakeSquare);
+          this.context.clearRect(tail.x * this.snakeSquare, tail.y * this.snakeSquare, this.snakeSquare, this.snakeSquare);
         } // the game pauses and prints 'lost', else draw the snake
 
 
@@ -369,25 +406,30 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 var World =
 /*#__PURE__*/
 function () {
-  function World(height, width, context) {
+  function World(height, width, gridSize) {
     _classCallCheck(this, World);
 
     this.fruits = [];
     this.width = width;
     this.height = height;
-    this.context = context;
+    this.context = window.context;
+    this.gridSize = gridSize;
     this.maxFruits = 5;
     this.fruitSize = 15;
 
     for (var i = 0; i < this.maxFruits; i++) {
-      this.fruits.push(this.generateFruit());
+      var newFruit = this.generateFruit();
+      console.log(newFruit);
+      this.fruits.push(newFruit);
     }
   }
 
   _createClass(World, [{
     key: "generateFruit",
     value: function generateFruit() {
-      return new _Position.default(Math.random() * this.width, Math.random() * this.height);
+      var x = Math.random() * this.width;
+      var y = Math.random() * this.height;
+      return new _Position.default(x - x % this.fruitSize, y - y % this.fruitSize);
     }
   }, {
     key: "draw",
@@ -396,12 +438,29 @@ function () {
       this.context.fillStyle = "rgb(255,0,0)";
 
       for (var i = 0; i < this.fruits.length; i++) {
+        var x = Math.abs(this.fruits[i].x - this.fruits[i].x % this.fruitSize);
+        var y = Math.abs(this.fruits[i].y - this.fruits[i].y % this.fruitSize);
+        console.log("Fruit ".concat(x, " ").concat(y));
         this.context.beginPath();
-        this.context.fillRect(this.fruits[i].x, this.fruits[i].y, this.fruitSize, this.fruitSize);
+        this.context.fillRect(x, y, this.fruitSize, this.fruitSize);
         this.context.closePath();
       }
 
       this.context.restore();
+    }
+  }, {
+    key: "isFruitEaten",
+    value: function isFruitEaten(snakePosition) {
+      var _this = this;
+
+      var value = this.fruits.findIndex(function (fruit) {
+        return Math.abs(fruit.x - fruit.x % _this.fruitSize) === snakePosition.x * _this.fruitSize && Math.abs(fruit.y - fruit.y % _this.fruitSize) === snakePosition.y * _this.fruitSize;
+      });
+
+      if (value !== -1) {
+        var newFruit = this.generateFruit();
+        this.fruits.splice(value, 1, newFruit);
+      }
     }
   }]);
 
@@ -409,110 +468,125 @@ function () {
 }();
 
 exports.default = World;
-},{"./Position":"src/Position.js"}],"index.js":[function(require,module,exports) {
+},{"./Position":"src/Position.js"}],"src/Game.js":[function(require,module,exports) {
 "use strict";
 
-var _Position = _interopRequireDefault(require("./src/Position"));
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
 
-var _Direction = _interopRequireDefault(require("./src/Direction"));
+var _Position = _interopRequireDefault(require("./Position"));
 
-var _Snake = _interopRequireDefault(require("./src/Snake"));
+var _Direction = _interopRequireDefault(require("./Direction"));
 
-var _World = _interopRequireDefault(require("./src/World"));
+var _Snake = _interopRequireDefault(require("./Snake"));
+
+var _World = _interopRequireDefault(require("./World"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var Game =
+/*#__PURE__*/
+function () {
+  function Game(width, height, fps, gridSize) {
+    _classCallCheck(this, Game);
+
+    this.width = width;
+    this.height = height;
+    this.context = window.context;
+    this.gridSize = gridSize;
+    this.fps = fps;
+    this.paused = false;
+    this.snake = null;
+    this.createWorld();
+    this.createSnake();
+  }
+
+  _createClass(Game, [{
+    key: "createSnake",
+    value: function createSnake() {
+      this.snake = new _Snake.default(new _Position.default(0, 0), new _Direction.default(1, 0), this.gridSize);
+      this.snake.draw();
+    }
+  }, {
+    key: "createWorld",
+    value: function createWorld() {
+      this.world = new _World.default(this.width, this.height);
+      this.world.draw();
+    }
+  }, {
+    key: "run",
+    value: function run() {
+      var _this = this;
+
+      if (this.paused || !this.snake) return;
+      setTimeout(function () {
+        requestAnimationFrame(_this.run.bind(_this));
+
+        _this.snake.update();
+
+        if (_this.world.isFruitEaten(_this.snake.position)) {
+          _this.world.fruits.push(_this.world.generateFruit());
+        }
+      }, 1000 / this.fps);
+    }
+  }, {
+    key: "handleKeys",
+    value: function handleKeys(keyCode) {
+      switch (keyCode) {
+        case 38:
+          this.snake.direction.canGoUp() && this.snake.direction.goUp();
+          break;
+
+        case 40:
+          this.snake.direction.canGoDown() && this.snake.direction.goDown();
+          break;
+
+        case 37:
+          this.snake.direction.canGoLeft() && this.snake.direction.goLeft();
+          break;
+
+        case 39:
+          this.snake.direction.canGoRight() && this.snake.direction.goRight();
+          break;
+
+        case 32:
+          this.paused = !this.paused;
+          if (!this.paused) this.run();
+          break;
+      }
+    }
+  }]);
+
+  return Game;
+}();
+
+exports.default = Game;
+},{"./Position":"src/Position.js","./Direction":"src/Direction.js","./Snake":"src/Snake.js","./World":"src/World.js"}],"index.js":[function(require,module,exports) {
+"use strict";
+
+var _utils = require("./src/utils");
+
+var _Game = _interopRequireDefault(require("./src/Game"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var width = window.innerWidth;
 var height = window.innerHeight;
-var fps = 8; // game speed
-
-var paused = false; // game pause trigger
-
-/**
- * Calculates the pixel ratio of the screen
- */
-
-var PIXEL_RATIO = function () {
-  var ctx = document.getElementById("canvas").getContext("2d"),
-      dpr = window.devicePixelRatio || 1,
-      bsr = ctx.webkitBackingStorePixelRatio || ctx.mozBackingStorePixelRatio || ctx.msBackingStorePixelRatio || ctx.oBackingStorePixelRatio || ctx.backingStorePixelRatio || 1;
-  return dpr / bsr;
-}();
-/**
- * Returns the context and canvas configured to support the aspect ratio of the browser
- * @param {int} w window width
- * @param {int} h window height
- * @param {int} ratio device aspect ratio
- */
-
-
-var createHiDPICanvas = function createHiDPICanvas(w, h, ratio) {
-  if (!ratio) {
-    ratio = PIXEL_RATIO;
-  }
-
-  var can = document.getElementById("canvas");
-  can.width = w * ratio;
-  can.height = h * ratio;
-  can.style.width = w + "px";
-  can.style.height = h + "px";
-  var ctx = can.getContext("2d");
-  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  return {
-    canvas: can,
-    context: ctx
-  };
-};
-
-var _createHiDPICanvas = createHiDPICanvas(width, height),
-    canvas = _createHiDPICanvas.canvas,
-    context = _createHiDPICanvas.context;
-
-var snake = new _Snake.default(new _Position.default(0, 0), new _Direction.default(1, 0), context);
-var world = new _World.default(width, height, context);
-/**
- * Animation loop function
- */
-
-function animate() {
-  if (paused) return;
-  setTimeout(function () {
-    requestAnimationFrame(animate);
-    snake.update();
-  }, 1000 / fps);
-}
-/**
- * Key events to move the snake
- */
-
-
+window.context = (0, _utils.createHiDPICanvas)("canvas", width, height);
+var game = new _Game.default(width, height, 8, 15);
 window.addEventListener("keydown", function (evt) {
-  switch (evt.keyCode) {
-    case 38:
-      snake.direction.canGoUp() && snake.direction.goUp();
-      break;
-
-    case 40:
-      snake.direction.canGoDown() && snake.direction.goDown();
-      break;
-
-    case 37:
-      snake.direction.canGoLeft() && snake.direction.goLeft();
-      break;
-
-    case 39:
-      snake.direction.canGoRight() && snake.direction.goRight();
-      break;
-
-    case 32:
-      paused = !paused;
-      if (!paused) animate();
-      break;
-  }
+  game.handleKeys(evt.keyCode);
 });
-world.draw();
-animate();
-},{"./src/Position":"src/Position.js","./src/Direction":"src/Direction.js","./src/Snake":"src/Snake.js","./src/World":"src/World.js"}],"node_modules/parcel/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+game.run();
+},{"./src/utils":"src/utils.js","./src/Game":"src/Game.js"}],"node_modules/parcel/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -540,7 +614,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "54417" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "53932" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

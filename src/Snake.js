@@ -5,15 +5,15 @@ export default class Snake {
    * Snake: Represents the game actor: the snake.
    * @param {Position} p the position of the head of the snake
    * @param {Direction} d the direction of the snake
-   * @param {Object} c the canvas context
+   * @param {number} width the width of the snake (usually same as the grid)
    */
-  constructor(p, d, c) {
+  constructor(p, d, width) {
     this.position = p;
     this.direction = d;
     this.body = [p];
     this.size = 20;
-    this.snakeSquare = 15;
-    this.context = c;
+    this.snakeSquare = width;
+    this.context = window.context;
   }
 
   /**
@@ -21,8 +21,8 @@ export default class Snake {
    */
   draw() {
     this.context.fillRect(
-      this.position.x * this.snakeSquare + this.snakeSquare / 2,
-      this.position.y * this.snakeSquare + this.snakeSquare / 2,
+      this.position.x * this.snakeSquare,
+      this.position.y * this.snakeSquare,
       this.snakeSquare,
       this.snakeSquare
     );
@@ -58,15 +58,15 @@ export default class Snake {
     this.position = this.body[0];
 
     if (this.isAHit()) {
-      paused = true;
+      this.paused = true;
       console.log("lost!");
     } else {
       // if body has grown enough, remove the tail at the end
       if (this.body.length === this.size) {
         tail = this.body.pop();
         this.context.clearRect(
-          tail.x * this.snakeSquare + this.snakeSquare / 2,
-          tail.y * this.snakeSquare + this.snakeSquare / 2,
+          tail.x * this.snakeSquare,
+          tail.y * this.snakeSquare,
           this.snakeSquare,
           this.snakeSquare
         );
