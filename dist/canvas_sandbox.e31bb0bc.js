@@ -125,6 +125,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.getPixelRatio = getPixelRatio;
 exports.createHiDPICanvas = createHiDPICanvas;
+exports.toGrid = toGrid;
 
 function getPixelRatio(canvasId) {
   var ctx = document.getElementById(canvasId).getContext("2d"),
@@ -154,6 +155,15 @@ function createHiDPICanvas(canvasId, w, h, ratio) {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   return ctx;
 }
+
+function toGrid(x, y, gridSize) {
+  var column = Math.abs(x / gridSize);
+  var row = Math.abs(y / gridSize);
+  return {
+    column: column,
+    row: row
+  };
+}
 },{}],"src/Position.js":[function(require,module,exports) {
 "use strict";
 
@@ -164,18 +174,34 @@ exports.default = void 0;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Position =
-/**
- * Position: represents a position on the screen.
- * @param {int} x the X coordinate
- * @param {*} y the Y coordinate
- */
-function Position(x, y) {
-  _classCallCheck(this, Position);
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-  this.x = x;
-  this.y = y;
-};
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var Position =
+/*#__PURE__*/
+function () {
+  /**
+   * Position: represents a position on the screen.
+   * @param {int} x the X coordinate
+   * @param {*} y the Y coordinate
+   */
+  function Position(x, y) {
+    _classCallCheck(this, Position);
+
+    this.x = x;
+    this.y = y;
+  }
+
+  _createClass(Position, [{
+    key: "isEqual",
+    value: function isEqual(position) {
+      return this.x === position.x && this.y === position.y;
+    }
+  }]);
+
+  return Position;
+}();
 
 exports.default = Position;
 },{}],"src/Direction.js":[function(require,module,exports) {
@@ -290,6 +316,17 @@ function () {
 }();
 
 exports.default = Direction;
+},{}],"src/Configs.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.grid = exports.fps = void 0;
+var fps = 8;
+exports.fps = fps;
+var grid = 15;
+exports.grid = grid;
 },{}],"src/Snake.js":[function(require,module,exports) {
 "use strict";
 
@@ -299,6 +336,8 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = void 0;
 
 var _Position = _interopRequireDefault(require("./Position"));
+
+var _Configs = require("./Configs");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -317,15 +356,13 @@ function () {
    * @param {Direction} d the direction of the snake
    * @param {number} width the width of the snake (usually same as the grid)
    */
-  function Snake(p, d, width) {
+  function Snake(position, direction, size) {
     _classCallCheck(this, Snake);
 
-    this.position = p;
-    this.direction = d;
-    this.body = [p];
-    this.size = 20;
-    this.snakeSquare = width;
-    this.context = window.context;
+    this.position = position;
+    this.direction = direction;
+    this.body = [position];
+    this.size = size;
   }
   /**
    * draws the snake body
@@ -334,8 +371,13 @@ function () {
 
   _createClass(Snake, [{
     key: "draw",
-    value: function draw() {
-      this.context.fillRect(this.position.x * this.snakeSquare, this.position.y * this.snakeSquare, this.snakeSquare, this.snakeSquare);
+    value: function draw(context) {
+      if (this.body.length > 1) {
+        var tail = this.body[this.body.length - 1];
+        context.clearRect(tail.x, tail.y, _Configs.grid, _Configs.grid);
+      }
+
+      context.fillRect(this.position.x, this.position.y, _Configs.grid, _Configs.grid);
     }
     /**
      * Returns true if the head of the snake hits its own body
@@ -347,7 +389,7 @@ function () {
       var hit = false;
 
       for (var i = 1; i < this.body.length && !hit; i++) {
-        hit = this.body[i].x === this.position.x && this.body[i].y === this.position.y;
+        hit = this.body[i].isEqual(this.position);
       }
 
       return hit;
@@ -359,24 +401,13 @@ function () {
   }, {
     key: "update",
     value: function update() {
-      var tail; // adds head's new position
-
-      this.body.unshift(new _Position.default(this.position.x + this.direction.h, this.position.y + this.direction.v)); // updates head's position
+      // adds head's new position
+      this.body.unshift(new _Position.default(this.position.x + this.direction.h * _Configs.grid, this.position.y + this.direction.v * _Configs.grid)); // updates head's position
 
       this.position = this.body[0];
 
-      if (this.isAHit()) {
-        this.paused = true;
-        console.log("lost!");
-      } else {
-        // if body has grown enough, remove the tail at the end
-        if (this.body.length === this.size) {
-          tail = this.body.pop();
-          this.context.clearRect(tail.x * this.snakeSquare, tail.y * this.snakeSquare, this.snakeSquare, this.snakeSquare);
-        } // the game pauses and prints 'lost', else draw the snake
-
-
-        this.draw();
+      if (this.body.length >= this.size) {
+        this.body.pop();
       }
     }
   }]);
@@ -385,13 +416,15 @@ function () {
 }();
 
 exports.default = Snake;
-},{"./Position":"src/Position.js"}],"src/World.js":[function(require,module,exports) {
+},{"./Position":"src/Position.js","./Configs":"src/Configs.js"}],"src/Fruit.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = void 0;
+
+var _Configs = require("./Configs");
 
 var _Position = _interopRequireDefault(require("./Position"));
 
@@ -403,72 +436,48 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var World =
+var Fruit =
 /*#__PURE__*/
 function () {
-  function World(height, width, gridSize) {
-    _classCallCheck(this, World);
+  function Fruit(maxWidth, maxHeight, points) {
+    _classCallCheck(this, Fruit);
 
-    this.fruits = [];
-    this.width = width;
-    this.height = height;
-    this.context = window.context;
-    this.gridSize = gridSize;
-    this.maxFruits = 5;
-    this.fruitSize = 15;
-
-    for (var i = 0; i < this.maxFruits; i++) {
-      var newFruit = this.generateFruit();
-      console.log(newFruit);
-      this.fruits.push(newFruit);
-    }
+    this._maxWidth = maxWidth;
+    this._maxHeight = maxHeight;
+    this.position = this._generatePosition();
+    this.points = points;
   }
 
-  _createClass(World, [{
-    key: "generateFruit",
-    value: function generateFruit() {
-      var x = Math.random() * this.width;
-      var y = Math.random() * this.height;
-      return new _Position.default(x - x % this.fruitSize, y - y % this.fruitSize);
+  _createClass(Fruit, [{
+    key: "_generatePosition",
+    value: function _generatePosition() {
+      var x = Math.random() * this._maxWidth;
+
+      var y = Math.random() * this._maxHeight;
+
+      return new _Position.default(x - x % _Configs.grid, y - y % _Configs.grid);
+    }
+  }, {
+    key: "updateFruit",
+    value: function updateFruit() {
+      console.log("new fruit!");
+      this.position = this._generatePosition();
     }
   }, {
     key: "draw",
-    value: function draw() {
-      this.context.save();
-      this.context.fillStyle = "rgb(255,0,0)";
-
-      for (var i = 0; i < this.fruits.length; i++) {
-        var x = Math.abs(this.fruits[i].x - this.fruits[i].x % this.fruitSize);
-        var y = Math.abs(this.fruits[i].y - this.fruits[i].y % this.fruitSize);
-        console.log("Fruit ".concat(x, " ").concat(y));
-        this.context.beginPath();
-        this.context.fillRect(x, y, this.fruitSize, this.fruitSize);
-        this.context.closePath();
-      }
-
-      this.context.restore();
-    }
-  }, {
-    key: "isFruitEaten",
-    value: function isFruitEaten(snakePosition) {
-      var _this = this;
-
-      var value = this.fruits.findIndex(function (fruit) {
-        return Math.abs(fruit.x - fruit.x % _this.fruitSize) === snakePosition.x * _this.fruitSize && Math.abs(fruit.y - fruit.y % _this.fruitSize) === snakePosition.y * _this.fruitSize;
-      });
-
-      if (value !== -1) {
-        var newFruit = this.generateFruit();
-        this.fruits.splice(value, 1, newFruit);
-      }
+    value: function draw(context) {
+      context.save();
+      context.fillStyle = "#FF0000";
+      context.fillRect(this.position.x, this.position.y, _Configs.grid, _Configs.grid);
+      context.restore();
     }
   }]);
 
-  return World;
+  return Fruit;
 }();
 
-exports.default = World;
-},{"./Position":"src/Position.js"}],"src/Game.js":[function(require,module,exports) {
+exports.default = Fruit;
+},{"./Configs":"src/Configs.js","./Position":"src/Position.js"}],"src/Game.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -482,7 +491,9 @@ var _Direction = _interopRequireDefault(require("./Direction"));
 
 var _Snake = _interopRequireDefault(require("./Snake"));
 
-var _World = _interopRequireDefault(require("./World"));
+var _Fruit = _interopRequireDefault(require("./Fruit"));
+
+var _Configs = require("./Configs");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -495,47 +506,61 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 var Game =
 /*#__PURE__*/
 function () {
-  function Game(width, height, fps, gridSize) {
+  function Game(context) {
     _classCallCheck(this, Game);
 
-    this.width = width;
-    this.height = height;
-    this.context = window.context;
-    this.gridSize = gridSize;
-    this.fps = fps;
     this.paused = false;
-    this.snake = null;
-    this.createWorld();
-    this.createSnake();
+    this.score = 0;
+    this.snake = new _Snake.default(new _Position.default(innerWidth / 2 - _Configs.grid / 2 - (innerWidth / 2 - _Configs.grid / 2) % _Configs.grid, innerHeight / 2 - _Configs.grid / 2 - (innerHeight / 2 - _Configs.grid / 2) % _Configs.grid), new _Direction.default(0, 1), 4);
+    this.fruit = new _Fruit.default(innerWidth, innerHeight, 1);
+    this.context = context;
+    this.snake.draw(this.context);
+    this.fruit.draw(this.context);
   }
 
   _createClass(Game, [{
-    key: "createSnake",
-    value: function createSnake() {
-      this.snake = new _Snake.default(new _Position.default(0, 0), new _Direction.default(1, 0), this.gridSize);
-      this.snake.draw();
-    }
-  }, {
-    key: "createWorld",
-    value: function createWorld() {
-      this.world = new _World.default(this.width, this.height);
-      this.world.draw();
-    }
-  }, {
     key: "run",
     value: function run() {
       var _this = this;
 
-      if (this.paused || !this.snake) return;
+      if (this.paused) return;
       setTimeout(function () {
         requestAnimationFrame(_this.run.bind(_this));
 
         _this.snake.update();
 
-        if (_this.world.isFruitEaten(_this.snake.position)) {
-          _this.world.fruits.push(_this.world.generateFruit());
+        if (_this.snake.isAHit()) {
+          _this.paused = true;
+          console.log("G A M E  O V E R!!!");
+        } else {
+          if (_this.snake.position.x < 0) {
+            _this.snake.position.x = innerWidth;
+          } else {
+            if (_this.snake.position.x > innerWidth) {
+              _this.snake.position.x = 0;
+            }
+          }
+
+          if (_this.snake.position.y < 0) {
+            _this.snake.position.y = innerHeight;
+          } else {
+            if (_this.snake.position.y > innerHeight) {
+              _this.snake.position.y = 0;
+            }
+          }
+
+          if (_this.snake.position.isEqual(_this.fruit.position)) {
+            _this.fruit.updateFruit();
+
+            _this.fruit.draw(_this.context);
+
+            _this.snake.size++;
+            _this.score += _this.fruit.points;
+          }
+
+          _this.snake.draw(_this.context);
         }
-      }, 1000 / this.fps);
+      }, 1000 / _Configs.fps);
     }
   }, {
     key: "handleKeys",
@@ -569,7 +594,7 @@ function () {
 }();
 
 exports.default = Game;
-},{"./Position":"src/Position.js","./Direction":"src/Direction.js","./Snake":"src/Snake.js","./World":"src/World.js"}],"index.js":[function(require,module,exports) {
+},{"./Position":"src/Position.js","./Direction":"src/Direction.js","./Snake":"src/Snake.js","./Fruit":"src/Fruit.js","./Configs":"src/Configs.js"}],"index.js":[function(require,module,exports) {
 "use strict";
 
 var _utils = require("./src/utils");
@@ -578,10 +603,8 @@ var _Game = _interopRequireDefault(require("./src/Game"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var width = window.innerWidth;
-var height = window.innerHeight;
-window.context = (0, _utils.createHiDPICanvas)("canvas", width, height);
-var game = new _Game.default(width, height, 8, 15);
+var context = (0, _utils.createHiDPICanvas)("canvas", innerWidth, innerHeight);
+var game = new _Game.default(context);
 window.addEventListener("keydown", function (evt) {
   game.handleKeys(evt.keyCode);
 });
@@ -614,7 +637,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "53932" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58335" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

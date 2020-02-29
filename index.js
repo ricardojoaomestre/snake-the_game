@@ -1,11 +1,9 @@
 import { createHiDPICanvas } from "./src/utils";
+
 import Game from "./src/Game";
+const context = createHiDPICanvas("canvas", innerWidth, innerHeight);
 
-const width = window.innerWidth;
-const height = window.innerHeight;
-
-window.context = createHiDPICanvas("canvas", width, height);
-const game = new Game(width, height, 8, 15);
+const game = new Game(context);
 window.addEventListener("keydown", evt => {
   game.handleKeys(evt.keyCode);
 });

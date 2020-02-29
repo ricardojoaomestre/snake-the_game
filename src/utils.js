@@ -31,3 +31,9 @@ export function createHiDPICanvas(canvasId, w, h, ratio) {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   return ctx;
 }
+
+export function toGrid(x, y, gridSize) {
+  const column = Math.abs(x / gridSize);
+  const row = Math.abs(y / gridSize);
+  return { column, row };
+}

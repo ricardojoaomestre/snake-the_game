@@ -1,44 +1,62 @@
 import Position from "./Position";
 import Direction from "./Direction";
 import Snake from "./Snake";
-import World from "./World";
+import Fruit from "./Fruit";
+import { grid, fps } from "./Configs";
 
 export default class Game {
-  constructor(width, height, fps, gridSize) {
-    this.width = width;
-    this.height = height;
-    this.context = window.context;
-    this.gridSize = gridSize;
-    this.fps = fps;
+  constructor(context) {
     this.paused = false;
-    this.snake = null;
-    this.createWorld();
-    this.createSnake();
-  }
-
-  createSnake() {
+    this.score = 0;
     this.snake = new Snake(
-      new Position(0, 0),
-      new Direction(1, 0),
-      this.gridSize
+      new Position(
+        innerWidth / 2 - grid / 2 - ((innerWidth / 2 - grid / 2) % grid),
+        innerHeight / 2 - grid / 2 - ((innerHeight / 2 - grid / 2) % grid)
+      ),
+      new Direction(0, 1),
+      4
     );
-    this.snake.draw();
-  }
-
-  createWorld() {
-    this.world = new World(this.width, this.height);
-    this.world.draw();
+    this.fruit = new Fruit(innerWidth, innerHeight, 1);
+    this.context = context;
+    this.snake.draw(this.context);
+    this.fruit.draw(this.context);
   }
 
   run() {
-    if (this.paused || !this.snake) return;
+    if (this.paused) return;
+
     setTimeout(() => {
       requestAnimationFrame(this.run.bind(this));
       this.snake.update();
-      if (this.world.isFruitEaten(this.snake.position)) {
-        this.world.fruits.push(this.world.generateFruit());
+      if (this.snake.isAHit()) {
+        this.paused = true;
+        console.log("G A M E  O V E R!!!");
+      } else {
+        if (this.snake.position.x < 0) {
+          this.snake.position.x = innerWidth;
+        } else {
+          if (this.snake.position.x > innerWidth) {
+            this.snake.position.x = 0;
+          }
+        }
+        if (this.snake.position.y < 0) {
+          this.snake.position.y = innerHeight;
+        } else {
+          if (this.snake.position.y > innerHeight) {
+            this.snake.position.y = 0;
+          }
+        }
+
+        if (this.snake.position.isEqual(this.fruit.position)) {
+          this.fruit.updateFruit();
+          this.fruit.draw(this.context);
+          this.snake.size++;
+          this.score += this.fruit.points;
+        }
+
+        this.snake.draw(this.context);
       }
-    }, 1000 / this.fps);
+    }, 1000 / fps);
   }
 
   handleKeys(keyCode) {
