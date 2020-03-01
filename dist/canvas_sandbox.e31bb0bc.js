@@ -126,6 +126,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.getPixelRatio = getPixelRatio;
 exports.createHiDPICanvas = createHiDPICanvas;
 exports.toGrid = toGrid;
+exports.randomBetween = randomBetween;
 
 function getPixelRatio(canvasId) {
   var ctx = document.getElementById(canvasId).getContext("2d"),
@@ -163,6 +164,10 @@ function toGrid(x, y, gridSize) {
     column: column,
     row: row
   };
+}
+
+function randomBetween(min, max) {
+  return Math.floor(Math.random() * max) + min;
 }
 },{}],"src/Position.js":[function(require,module,exports) {
 "use strict";
@@ -416,12 +421,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
-var _Configs = require("./Configs");
-
-var _Position = _interopRequireDefault(require("./Position"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -431,7 +430,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 var Fruit =
 /*#__PURE__*/
 function () {
-  function Fruit(maxWidth, maxHeight) {
+  function Fruit(size) {
     _classCallCheck(this, Fruit);
 
     this.colors = {
@@ -440,39 +439,17 @@ function () {
       30: "#00FF00",
       40: "#0000FF"
     };
-    this._maxWidth = maxWidth;
-    this._maxHeight = maxHeight;
-    this.position = this._generatePosition();
-    this.points = this._generatePoints();
+    this.size = size;
+    this.position = null;
+    this.points = null;
   }
 
   _createClass(Fruit, [{
-    key: "_generatePosition",
-    value: function _generatePosition() {
-      var x = Math.random() * (this._maxWidth - _Configs.grid);
-
-      var y = Math.random() * (this._maxHeight - _Configs.grid);
-
-      return new _Position.default(x - x % _Configs.grid, y - y % _Configs.grid);
-    }
-  }, {
-    key: "_generatePoints",
-    value: function _generatePoints() {
-      return (Math.trunc(Math.random() * 4) + 1) * 10;
-    }
-  }, {
-    key: "updateFruit",
-    value: function updateFruit() {
-      console.log("new fruit!");
-      this.position = this._generatePosition();
-      this.points = this._generatePoints();
-    }
-  }, {
     key: "draw",
     value: function draw(context) {
       context.save();
       context.fillStyle = this.colors[this.points];
-      context.fillRect(this.position.x, this.position.y, _Configs.grid, _Configs.grid);
+      context.fillRect(this.position.x, this.position.y, this.size, this.size);
       context.restore();
     }
   }]);
@@ -481,7 +458,7 @@ function () {
 }();
 
 exports.default = Fruit;
-},{"./Configs":"src/Configs.js","./Position":"src/Position.js"}],"src/Key.js":[function(require,module,exports) {
+},{}],"src/Key.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -571,6 +548,8 @@ var _Key = _interopRequireDefault(require("./Key"));
 
 var _scoreBar = _interopRequireDefault(require("./scoreBar"));
 
+var _utils = require("./utils");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -585,23 +564,97 @@ function () {
   function Game(context) {
     _classCallCheck(this, Game);
 
+    this.context = context;
+    window.context = context;
     this.paused = false;
-    this.score = new _scoreBar.default(new _Position.default(0, 0), innerWidth, 30, 0);
+    this.board = {
+      top: 30,
+      bottom: innerHeight,
+      left: 0,
+      right: innerWidth,
+      width: innerWidth,
+      height: innerHeight - 30
+    };
+    this.score = null;
+    this.fruit = null;
+    this.snake = null;
+    this.setup();
     window.addEventListener("keydown", function (evt) {
       return _Key.default.onKeydown(evt);
     }, false);
     window.addEventListener("keyup", function (evt) {
       return _Key.default.onKeyup(evt);
     }, false);
-    this.snake = new _Snake.default(new _Position.default(innerWidth / 2 - _Configs.grid / 2 - (innerWidth / 2 - _Configs.grid / 2) % _Configs.grid, (innerHeight - this.score.height) / 2 - _Configs.grid / 2 - ((innerHeight - this.score.height) / 2 - _Configs.grid / 2) % _Configs.grid), new _Direction.default(0, 1), 4);
-    this.fruit = new _Fruit.default(innerWidth, innerHeight - this.score.height, 1);
-    this.context = context;
     this.snake.draw(this.context);
     this.fruit.draw(this.context);
     this.score.draw(this.context);
+    console.log(this.fruit.position);
   }
 
   _createClass(Game, [{
+    key: "setup",
+    value: function setup() {
+      this.score = new _scoreBar.default(new _Position.default(0, 0), this.board.width, this.board.top, 0);
+      this.fruit = new _Fruit.default(_Configs.grid);
+      this.snake = this.createSnake();
+      this.generateNewFruit();
+    }
+  }, {
+    key: "createSnake",
+    value: function createSnake() {
+      var x = this.board.width / 2 - _Configs.grid / 2 - (this.board.width / 2 - _Configs.grid / 2) % _Configs.grid;
+      var y = this.board.height / 2 - _Configs.grid / 2 - (this.board.height / 2 - _Configs.grid / 2) % _Configs.grid;
+      return new _Snake.default(new _Position.default(x, y), new _Direction.default(0, 1), 4);
+    }
+  }, {
+    key: "generateNewFruit",
+    value: function generateNewFruit() {
+      this.fruit.position = this.generateFruitPosition();
+      this.fruit.points = this.generateFruitPoints();
+    }
+  }, {
+    key: "generateFruitPosition",
+    value: function generateFruitPosition() {
+      var x = (0, _utils.randomBetween)(this.board.left, this.board.right - _Configs.grid);
+      var y = (0, _utils.randomBetween)(this.board.top, this.board.bottom - _Configs.grid);
+      return new _Position.default(x - x % _Configs.grid, y - y % _Configs.grid);
+    }
+  }, {
+    key: "generateFruitPoints",
+    value: function generateFruitPoints() {
+      return (0, _utils.randomBetween)(1, 4) * 10;
+    }
+  }, {
+    key: "checkLimits",
+    value: function checkLimits() {
+      if (this.snake.position.x < this.board.left) {
+        this.snake.position.x = this.board.right - _Configs.grid;
+      } else {
+        if (this.snake.position.x > this.board.right - _Configs.grid) {
+          this.snake.position.x = this.board.left;
+        }
+      }
+
+      if (this.snake.position.y < this.board.top) {
+        this.snake.position.y = this.board.bottom - _Configs.grid;
+      } else {
+        if (this.snake.position.y > this.board.bottom - _Configs.grid) {
+          this.snake.position.y = this.board.top;
+        }
+      }
+    }
+  }, {
+    key: "checkMeal",
+    value: function checkMeal() {
+      if (this.snake.position.isEqual(this.fruit.position)) {
+        this.snake.size++;
+        this.score.score += this.fruit.points;
+        this.generateNewFruit();
+        this.fruit.draw(this.context);
+        this.score.draw(this.context);
+      }
+    }
+  }, {
     key: "run",
     value: function run() {
       var _this = this;
@@ -622,39 +675,15 @@ function () {
 
         _this.snake.update();
 
-        if (_this.snake.isAHit()) {
-          _this.paused = true;
-          console.log("G A M E  O V E R!!!");
-          return;
-        } else {
-          if (_this.snake.position.x < 0) {
-            _this.snake.position.x = innerWidth - _Configs.grid;
-          } else {
-            if (_this.snake.position.x > innerWidth - _Configs.grid) {
-              _this.snake.position.x = 0;
-            }
-          }
+        if (!_this.snake.isAHit()) {
+          _this.checkLimits();
 
-          if (_this.snake.position.y < _this.score.height) {
-            _this.snake.position.y = innerHeight - _Configs.grid;
-          } else {
-            if (_this.snake.position.y > innerHeight - _Configs.grid) {
-              _this.snake.position.y = _this.score.height;
-            }
-          }
-
-          if (_this.snake.position.isEqual(_this.fruit.position)) {
-            _this.snake.size++;
-            _this.score.score += _this.fruit.points;
-
-            _this.fruit.updateFruit();
-
-            _this.fruit.draw(_this.context);
-
-            _this.score.draw(_this.context);
-          }
+          _this.checkMeal();
 
           _this.snake.draw(_this.context);
+        } else {
+          _this.paused = true;
+          console.log("G A M E  O V E R!!!");
         }
       }, 1000 / _Configs.fps);
     }
@@ -664,7 +693,7 @@ function () {
 }();
 
 exports.default = Game;
-},{"./Position":"src/Position.js","./Direction":"src/Direction.js","./Snake":"src/Snake.js","./Fruit":"src/Fruit.js","./Configs":"src/Configs.js","./Key":"src/Key.js","./scoreBar":"src/scoreBar.js"}],"index.js":[function(require,module,exports) {
+},{"./Position":"src/Position.js","./Direction":"src/Direction.js","./Snake":"src/Snake.js","./Fruit":"src/Fruit.js","./Configs":"src/Configs.js","./Key":"src/Key.js","./scoreBar":"src/scoreBar.js","./utils":"src/utils.js"}],"index.js":[function(require,module,exports) {
 "use strict";
 
 var _utils = require("./src/utils");
@@ -704,7 +733,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60628" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "52284" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

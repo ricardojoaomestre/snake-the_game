@@ -37,3 +37,7 @@ export function toGrid(x, y, gridSize) {
   const row = Math.abs(y / gridSize);
   return { column, row };
 }
+
+export function randomBetween(min, max) {
+  return Math.floor(Math.random() * max) + min;
+}
