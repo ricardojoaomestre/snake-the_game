@@ -54,4 +54,19 @@ export default class Snake {
       this.body.pop();
     }
   }
+
+  goUp() {
+    this.direction.goUp();
+  }
+
+  goDown() {
+    this.direction.goDown();
+  }
+
+  goLeft() {
+    this.direction.goLeft();
+  }
+  goRight() {
+    this.direction.goRight();
+  }
 }

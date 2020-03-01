@@ -11,62 +11,42 @@ export default class Direction {
   }
 
   /**
-   * returns true if it's possible to turn left
-   */
-  canGoLeft() {
-    return this.h === 0;
-  }
-
-  /**
    * changes horizontal direction to -1 (left)
    */
   goLeft() {
-    this.v = 0;
-    this.h = -1;
-  }
-
-  /**
-   * returns true if it's possible to turn right
-   */
-  canGoRight() {
-    return this.h === 0;
+    if (!this.h) {
+      this.v = 0;
+      this.h = -1;
+    }
   }
 
   /**
    * changes horizontal direction to 1 (right)
    */
   goRight() {
-    this.v = 0;
-    this.h = 1;
-  }
-
-  /**
-   * returns true if it's possible to turn up
-   */
-  canGoUp() {
-    return this.v === 0;
+    if (!this.h) {
+      this.v = 0;
+      this.h = 1;
+    }
   }
 
   /**
    * changes vertical direction to -1 (up)
    */
   goUp() {
-    this.v = -1;
-    this.h = 0;
-  }
-
-  /**
-   * returns true if it's possible to turn down
-   */
-  canGoDown() {
-    return this.v === 0;
+    if (!this.v) {
+      this.v = -1;
+      this.h = 0;
+    }
   }
 
   /**
    * changes vertical direction to 1 (down)
    */
   goDown() {
-    this.v = 1;
-    this.h = 0;
+    if (!this.v) {
+      this.v = 1;
+      this.h = 0;
+    }
   }
 }

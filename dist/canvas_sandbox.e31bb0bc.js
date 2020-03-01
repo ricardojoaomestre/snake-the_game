@@ -234,33 +234,17 @@ function () {
     this.v = v;
   }
   /**
-   * returns true if it's possible to turn left
+   * changes horizontal direction to -1 (left)
    */
 
 
   _createClass(Direction, [{
-    key: "canGoLeft",
-    value: function canGoLeft() {
-      return this.h === 0;
-    }
-    /**
-     * changes horizontal direction to -1 (left)
-     */
-
-  }, {
     key: "goLeft",
     value: function goLeft() {
-      this.v = 0;
-      this.h = -1;
-    }
-    /**
-     * returns true if it's possible to turn right
-     */
-
-  }, {
-    key: "canGoRight",
-    value: function canGoRight() {
-      return this.h === 0;
+      if (!this.h) {
+        this.v = 0;
+        this.h = -1;
+      }
     }
     /**
      * changes horizontal direction to 1 (right)
@@ -269,17 +253,10 @@ function () {
   }, {
     key: "goRight",
     value: function goRight() {
-      this.v = 0;
-      this.h = 1;
-    }
-    /**
-     * returns true if it's possible to turn up
-     */
-
-  }, {
-    key: "canGoUp",
-    value: function canGoUp() {
-      return this.v === 0;
+      if (!this.h) {
+        this.v = 0;
+        this.h = 1;
+      }
     }
     /**
      * changes vertical direction to -1 (up)
@@ -288,17 +265,10 @@ function () {
   }, {
     key: "goUp",
     value: function goUp() {
-      this.v = -1;
-      this.h = 0;
-    }
-    /**
-     * returns true if it's possible to turn down
-     */
-
-  }, {
-    key: "canGoDown",
-    value: function canGoDown() {
-      return this.v === 0;
+      if (!this.v) {
+        this.v = -1;
+        this.h = 0;
+      }
     }
     /**
      * changes vertical direction to 1 (down)
@@ -307,8 +277,10 @@ function () {
   }, {
     key: "goDown",
     value: function goDown() {
-      this.v = 1;
-      this.h = 0;
+      if (!this.v) {
+        this.v = 1;
+        this.h = 0;
+      }
     }
   }]);
 
@@ -323,7 +295,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.grid = exports.fps = void 0;
-var fps = 8;
+var fps = 10;
 exports.fps = fps;
 var grid = 15;
 exports.grid = grid;
@@ -410,6 +382,26 @@ function () {
         this.body.pop();
       }
     }
+  }, {
+    key: "goUp",
+    value: function goUp() {
+      this.direction.goUp();
+    }
+  }, {
+    key: "goDown",
+    value: function goDown() {
+      this.direction.goDown();
+    }
+  }, {
+    key: "goLeft",
+    value: function goLeft() {
+      this.direction.goLeft();
+    }
+  }, {
+    key: "goRight",
+    value: function goRight() {
+      this.direction.goRight();
+    }
   }]);
 
   return Snake;
@@ -451,9 +443,9 @@ function () {
   _createClass(Fruit, [{
     key: "_generatePosition",
     value: function _generatePosition() {
-      var x = Math.random() * this._maxWidth;
+      var x = Math.random() * (this._maxWidth - _Configs.grid);
 
-      var y = Math.random() * this._maxHeight;
+      var y = Math.random() * (this._maxHeight - _Configs.grid);
 
       return new _Position.default(x - x % _Configs.grid, y - y % _Configs.grid);
     }
@@ -477,7 +469,32 @@ function () {
 }();
 
 exports.default = Fruit;
-},{"./Configs":"src/Configs.js","./Position":"src/Position.js"}],"src/Game.js":[function(require,module,exports) {
+},{"./Configs":"src/Configs.js","./Position":"src/Position.js"}],"src/Key.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+var _default = {
+  _pressed: {},
+  LEFT: 37,
+  UP: 38,
+  RIGHT: 39,
+  DOWN: 40,
+  SPACE: 32,
+  isDown: function isDown(keyCode) {
+    return this._pressed[keyCode];
+  },
+  onKeydown: function onKeydown(event) {
+    if (!this._pressed[0]) this._pressed[event.keyCode] = true;
+  },
+  onKeyup: function onKeyup(event) {
+    delete this._pressed[event.keyCode];
+  }
+};
+exports.default = _default;
+},{}],"src/Game.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -495,6 +512,8 @@ var _Fruit = _interopRequireDefault(require("./Fruit"));
 
 var _Configs = require("./Configs");
 
+var _Key = _interopRequireDefault(require("./Key"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -511,6 +530,12 @@ function () {
 
     this.paused = false;
     this.score = 0;
+    window.addEventListener("keydown", function (evt) {
+      return _Key.default.onKeydown(evt);
+    }, false);
+    window.addEventListener("keyup", function (evt) {
+      return _Key.default.onKeyup(evt);
+    }, false);
     this.snake = new _Snake.default(new _Position.default(innerWidth / 2 - _Configs.grid / 2 - (innerWidth / 2 - _Configs.grid / 2) % _Configs.grid, innerHeight / 2 - _Configs.grid / 2 - (innerHeight / 2 - _Configs.grid / 2) % _Configs.grid), new _Direction.default(0, 1), 4);
     this.fruit = new _Fruit.default(innerWidth, innerHeight, 1);
     this.context = context;
@@ -524,6 +549,16 @@ function () {
       var _this = this;
 
       if (this.paused) return;
+      if (_Key.default.isDown(_Key.default.UP)) this.snake.goUp();
+      if (_Key.default.isDown(_Key.default.DOWN)) this.snake.goDown();
+      if (_Key.default.isDown(_Key.default.LEFT)) this.snake.goLeft();
+      if (_Key.default.isDown(_Key.default.RIGHT)) this.snake.goRight();
+
+      if (_Key.default.isDown(_Key.default.SPACE)) {
+        this.paused = !this.paused;
+        if (!this.paused) this.run();
+      }
+
       setTimeout(function () {
         requestAnimationFrame(_this.run.bind(_this));
 
@@ -532,19 +567,20 @@ function () {
         if (_this.snake.isAHit()) {
           _this.paused = true;
           console.log("G A M E  O V E R!!!");
+          return;
         } else {
           if (_this.snake.position.x < 0) {
-            _this.snake.position.x = innerWidth;
+            _this.snake.position.x = innerWidth - _Configs.grid;
           } else {
-            if (_this.snake.position.x > innerWidth) {
+            if (_this.snake.position.x > innerWidth - _Configs.grid) {
               _this.snake.position.x = 0;
             }
           }
 
           if (_this.snake.position.y < 0) {
-            _this.snake.position.y = innerHeight;
+            _this.snake.position.y = innerHeight - _Configs.grid;
           } else {
-            if (_this.snake.position.y > innerHeight) {
+            if (_this.snake.position.y > innerHeight - _Configs.grid) {
               _this.snake.position.y = 0;
             }
           }
@@ -562,39 +598,13 @@ function () {
         }
       }, 1000 / _Configs.fps);
     }
-  }, {
-    key: "handleKeys",
-    value: function handleKeys(keyCode) {
-      switch (keyCode) {
-        case 38:
-          this.snake.direction.canGoUp() && this.snake.direction.goUp();
-          break;
-
-        case 40:
-          this.snake.direction.canGoDown() && this.snake.direction.goDown();
-          break;
-
-        case 37:
-          this.snake.direction.canGoLeft() && this.snake.direction.goLeft();
-          break;
-
-        case 39:
-          this.snake.direction.canGoRight() && this.snake.direction.goRight();
-          break;
-
-        case 32:
-          this.paused = !this.paused;
-          if (!this.paused) this.run();
-          break;
-      }
-    }
   }]);
 
   return Game;
 }();
 
 exports.default = Game;
-},{"./Position":"src/Position.js","./Direction":"src/Direction.js","./Snake":"src/Snake.js","./Fruit":"src/Fruit.js","./Configs":"src/Configs.js"}],"index.js":[function(require,module,exports) {
+},{"./Position":"src/Position.js","./Direction":"src/Direction.js","./Snake":"src/Snake.js","./Fruit":"src/Fruit.js","./Configs":"src/Configs.js","./Key":"src/Key.js"}],"index.js":[function(require,module,exports) {
 "use strict";
 
 var _utils = require("./src/utils");
@@ -605,9 +615,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var context = (0, _utils.createHiDPICanvas)("canvas", innerWidth, innerHeight);
 var game = new _Game.default(context);
-window.addEventListener("keydown", function (evt) {
-  game.handleKeys(evt.keyCode);
-});
 game.run();
 },{"./src/utils":"src/utils.js","./src/Game":"src/Game.js"}],"node_modules/parcel/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
@@ -637,7 +644,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58335" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "54988" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

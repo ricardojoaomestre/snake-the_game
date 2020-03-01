@@ -1,2 +1,2 @@
-export const fps = 8;
+export const fps = 10;
 export const grid = 15;

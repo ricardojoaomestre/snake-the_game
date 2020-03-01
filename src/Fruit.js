@@ -11,8 +11,8 @@ export default class Fruit {
   }
 
   _generatePosition() {
-    const x = Math.random() * this._maxWidth;
-    const y = Math.random() * this._maxHeight;
+    const x = Math.random() * (this._maxWidth - grid);
+    const y = Math.random() * (this._maxHeight - grid);
     return new Position(x - (x % grid), y - (y % grid));
   }
 
