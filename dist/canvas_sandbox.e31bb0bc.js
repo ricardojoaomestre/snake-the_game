@@ -431,13 +431,19 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 var Fruit =
 /*#__PURE__*/
 function () {
-  function Fruit(maxWidth, maxHeight, points) {
+  function Fruit(maxWidth, maxHeight) {
     _classCallCheck(this, Fruit);
 
+    this.colors = {
+      10: "#000000",
+      20: "#FF0000",
+      30: "#00FF00",
+      40: "#0000FF"
+    };
     this._maxWidth = maxWidth;
     this._maxHeight = maxHeight;
     this.position = this._generatePosition();
-    this.points = points;
+    this.points = this._generatePoints();
   }
 
   _createClass(Fruit, [{
@@ -450,16 +456,22 @@ function () {
       return new _Position.default(x - x % _Configs.grid, y - y % _Configs.grid);
     }
   }, {
+    key: "_generatePoints",
+    value: function _generatePoints() {
+      return (Math.trunc(Math.random() * 4) + 1) * 10;
+    }
+  }, {
     key: "updateFruit",
     value: function updateFruit() {
       console.log("new fruit!");
       this.position = this._generatePosition();
+      this.points = this._generatePoints();
     }
   }, {
     key: "draw",
     value: function draw(context) {
       context.save();
-      context.fillStyle = "#FF0000";
+      context.fillStyle = this.colors[this.points];
       context.fillRect(this.position.x, this.position.y, _Configs.grid, _Configs.grid);
       context.restore();
     }
@@ -494,6 +506,49 @@ var _default = {
   }
 };
 exports.default = _default;
+},{}],"src/scoreBar.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var ScoreBar =
+/*#__PURE__*/
+function () {
+  function ScoreBar(position, width, height, score) {
+    _classCallCheck(this, ScoreBar);
+
+    this.position = position;
+    this.width = width;
+    this.height = height;
+    this.score = score;
+  }
+
+  _createClass(ScoreBar, [{
+    key: "draw",
+    value: function draw(context) {
+      context.save();
+      context.clearRect(this.position.x, this.position.y, this.width, this.height);
+      context.fillRect(this.position.x, this.position.y, this.width, this.height);
+      context.font = "".concat(this.height - 10, "px Arial");
+      context.fillStyle = "#FFFFFF";
+      context.fillText("Score ".concat(this.score), this.position.x + this.height - 10, this.position.y + this.height - 10);
+      context.restore();
+    }
+  }]);
+
+  return ScoreBar;
+}();
+
+exports.default = ScoreBar;
 },{}],"src/Game.js":[function(require,module,exports) {
 "use strict";
 
@@ -514,6 +569,8 @@ var _Configs = require("./Configs");
 
 var _Key = _interopRequireDefault(require("./Key"));
 
+var _scoreBar = _interopRequireDefault(require("./scoreBar"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -529,18 +586,19 @@ function () {
     _classCallCheck(this, Game);
 
     this.paused = false;
-    this.score = 0;
+    this.score = new _scoreBar.default(new _Position.default(0, 0), innerWidth, 30, 0);
     window.addEventListener("keydown", function (evt) {
       return _Key.default.onKeydown(evt);
     }, false);
     window.addEventListener("keyup", function (evt) {
       return _Key.default.onKeyup(evt);
     }, false);
-    this.snake = new _Snake.default(new _Position.default(innerWidth / 2 - _Configs.grid / 2 - (innerWidth / 2 - _Configs.grid / 2) % _Configs.grid, innerHeight / 2 - _Configs.grid / 2 - (innerHeight / 2 - _Configs.grid / 2) % _Configs.grid), new _Direction.default(0, 1), 4);
-    this.fruit = new _Fruit.default(innerWidth, innerHeight, 1);
+    this.snake = new _Snake.default(new _Position.default(innerWidth / 2 - _Configs.grid / 2 - (innerWidth / 2 - _Configs.grid / 2) % _Configs.grid, (innerHeight - this.score.height) / 2 - _Configs.grid / 2 - ((innerHeight - this.score.height) / 2 - _Configs.grid / 2) % _Configs.grid), new _Direction.default(0, 1), 4);
+    this.fruit = new _Fruit.default(innerWidth, innerHeight - this.score.height, 1);
     this.context = context;
     this.snake.draw(this.context);
     this.fruit.draw(this.context);
+    this.score.draw(this.context);
   }
 
   _createClass(Game, [{
@@ -577,21 +635,23 @@ function () {
             }
           }
 
-          if (_this.snake.position.y < 0) {
+          if (_this.snake.position.y < _this.score.height) {
             _this.snake.position.y = innerHeight - _Configs.grid;
           } else {
             if (_this.snake.position.y > innerHeight - _Configs.grid) {
-              _this.snake.position.y = 0;
+              _this.snake.position.y = _this.score.height;
             }
           }
 
           if (_this.snake.position.isEqual(_this.fruit.position)) {
+            _this.snake.size++;
+            _this.score.score += _this.fruit.points;
+
             _this.fruit.updateFruit();
 
             _this.fruit.draw(_this.context);
 
-            _this.snake.size++;
-            _this.score += _this.fruit.points;
+            _this.score.draw(_this.context);
           }
 
           _this.snake.draw(_this.context);
@@ -604,7 +664,7 @@ function () {
 }();
 
 exports.default = Game;
-},{"./Position":"src/Position.js","./Direction":"src/Direction.js","./Snake":"src/Snake.js","./Fruit":"src/Fruit.js","./Configs":"src/Configs.js","./Key":"src/Key.js"}],"index.js":[function(require,module,exports) {
+},{"./Position":"src/Position.js","./Direction":"src/Direction.js","./Snake":"src/Snake.js","./Fruit":"src/Fruit.js","./Configs":"src/Configs.js","./Key":"src/Key.js","./scoreBar":"src/scoreBar.js"}],"index.js":[function(require,module,exports) {
 "use strict";
 
 var _utils = require("./src/utils");
@@ -644,7 +704,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "54988" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60628" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

@@ -4,26 +4,30 @@ import Snake from "./Snake";
 import Fruit from "./Fruit";
 import { grid, fps } from "./Configs";
 import Key from "./Key";
+import ScoreBar from "./scoreBar";
 
 export default class Game {
   constructor(context) {
     this.paused = false;
-    this.score = 0;
+    this.score = new ScoreBar(new Position(0, 0), innerWidth, 30, 0);
     window.addEventListener("keydown", evt => Key.onKeydown(evt), false);
     window.addEventListener("keyup", evt => Key.onKeyup(evt), false);
 
     this.snake = new Snake(
       new Position(
         innerWidth / 2 - grid / 2 - ((innerWidth / 2 - grid / 2) % grid),
-        innerHeight / 2 - grid / 2 - ((innerHeight / 2 - grid / 2) % grid)
+        (innerHeight - this.score.height) / 2 -
+          grid / 2 -
+          (((innerHeight - this.score.height) / 2 - grid / 2) % grid)
       ),
       new Direction(0, 1),
       4
     );
-    this.fruit = new Fruit(innerWidth, innerHeight, 1);
+    this.fruit = new Fruit(innerWidth, innerHeight - this.score.height, 1);
     this.context = context;
     this.snake.draw(this.context);
     this.fruit.draw(this.context);
+    this.score.draw(this.context);
   }
 
   run() {
@@ -53,19 +57,20 @@ export default class Game {
             this.snake.position.x = 0;
           }
         }
-        if (this.snake.position.y < 0) {
+        if (this.snake.position.y < this.score.height) {
           this.snake.position.y = innerHeight - grid;
         } else {
           if (this.snake.position.y > innerHeight - grid) {
-            this.snake.position.y = 0;
+            this.snake.position.y = this.score.height;
           }
         }
 
         if (this.snake.position.isEqual(this.fruit.position)) {
+          this.snake.size++;
+          this.score.score += this.fruit.points;
           this.fruit.updateFruit();
           this.fruit.draw(this.context);
-          this.snake.size++;
-          this.score += this.fruit.points;
+          this.score.draw(this.context);
         }
 
         this.snake.draw(this.context);
