@@ -1,5 +1,7 @@
 # Snake - The Game
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/24e6b0ff-f5ab-4d1c-a786-ff6bf019e0a1/deploy-status)](https://app.netlify.com/sites/snake-the-game/deploys)
+
 This is my first experience using Canvas. So I decided to create the immortal snake game to figure out the basics of canvas.
 
 The game is pretty simple. Use the directional keys to control the snake. Eat the fruit to grow the snake. Fruits with different colors mean different amount of points.
