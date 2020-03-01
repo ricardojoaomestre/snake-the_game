@@ -14,24 +14,35 @@ export default class Game {
     this.paused = false;
     this.board = {
       top: 30,
-      bottom: innerHeight,
+      bottom: innerHeight - (innerHeight % grid),
       left: 0,
-      right: innerWidth,
-      width: innerWidth,
-      height: innerHeight - 30
+      right: innerWidth - (innerWidth % grid),
+      width: innerWidth - (innerWidth % grid) - 0,
+      height: innerHeight - (innerHeight % grid) - 30
     };
+
     this.score = null;
     this.fruit = null;
     this.snake = null;
     this.setup();
 
-    window.addEventListener("keydown", evt => Key.onKeydown(evt), false);
+    window.addEventListener(
+      "keydown",
+      evt => {
+        if (evt.keyCode === Key.SPACE) {
+          this.paused = !this.paused;
+          if (!this.paused) this.run();
+        } else {
+          Key.onKeydown(evt);
+        }
+      },
+      false
+    );
     window.addEventListener("keyup", evt => Key.onKeyup(evt), false);
 
     this.snake.draw(this.context);
     this.fruit.draw(this.context);
     this.score.draw(this.context);
-    console.log(this.fruit.position);
   }
 
   setup() {
@@ -83,9 +94,9 @@ export default class Game {
       }
     }
     if (this.snake.position.y < this.board.top) {
-      this.snake.position.y = this.board.bottom - grid;
+      this.snake.position.y = this.board.bottom;
     } else {
-      if (this.snake.position.y > this.board.bottom - grid) {
+      if (this.snake.position.y > this.board.bottom) {
         this.snake.position.y = this.board.top;
       }
     }
@@ -108,10 +119,6 @@ export default class Game {
     if (Key.isDown(Key.DOWN)) this.snake.goDown();
     if (Key.isDown(Key.LEFT)) this.snake.goLeft();
     if (Key.isDown(Key.RIGHT)) this.snake.goRight();
-    if (Key.isDown(Key.SPACE)) {
-      this.paused = !this.paused;
-      if (!this.paused) this.run();
-    }
 
     setTimeout(() => {
       requestAnimationFrame(this.run.bind(this));
